@@ -3,10 +3,22 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from '../src/modules/auth/auth.module';
+import { ConfigModule } from '@nestjs/config';
+import { envValidationSchema } from './config/env.validation';
 
 @Module({
-  imports: [PrismaModule, AuthModule],
+  imports: [
+    PrismaModule,
+    AuthModule,
+    ConfigModule.forRoot({
+      isGlobal: true,
+      validationSchema: envValidationSchema,
+      validationOptions: {
+        abortEarly: false,
+      },
+    }),
+  ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule { }
