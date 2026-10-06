@@ -5,7 +5,7 @@ import { UpdateSpecializationDto } from './dto/update-specialization.dto';
 
 @Injectable()
 export class SpecializationsService {
-    constructor(private prisma: PrismaService) { }
+    constructor(private readonly prisma: PrismaService) { }
 
     async create(dto: CreateSpecializationDto) {
         const specialization = await this.prisma.food_specializations.create({ data: dto });
