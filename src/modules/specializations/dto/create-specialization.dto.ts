@@ -1,13 +1,13 @@
 import { Injectable } from "@nestjs/common";
-import { IsNotEmpty, IsOptional, IsString, Max } from "class-validator";
+import { IsNotEmpty, IsOptional, IsString, MaxLength } from "class-validator";
 
 @Injectable()
 export class CreateSpecializationDto {
     @IsString()
-    @Max(100)
+    @MaxLength(100)
     @IsNotEmpty()
     name!: string
     @IsOptional()
-    @IsString()
+    @IsString() 
     description?: string
 }
