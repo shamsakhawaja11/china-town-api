@@ -1,18 +1,11 @@
-import { Injectable } from "@nestjs/common";
-import { PartialType } from "@nestjs/mapped-types";
-import { CreateSpecializationDto } from "./create-specialization.dto";
-import { IsOptional, IsString, Max } from "class-validator";
+import { PartialType } from '@nestjs/mapped-types';
+import { IsBoolean, IsOptional } from 'class-validator';
+import { CreateSpecializationDto } from './create-specialization.dto';
 
-@Injectable()
-export class UpdateSpecializationDto {
-    @IsString()
-    @IsOptional()
-    @Max(100)
-    name?: string
-    @IsOptional()
-    @IsString()
-    decription?:string
-    @IsOptional()
-    is_active?:true
-
- }
+export class UpdateSpecializationDto extends PartialType(
+  CreateSpecializationDto,
+) {
+  @IsOptional()
+  @IsBoolean()
+  is_active?: boolean;
+}   
