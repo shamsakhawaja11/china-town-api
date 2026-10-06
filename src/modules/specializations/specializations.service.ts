@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ParseUUIDPipe } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateSpecializationDto } from './dto/create-specialization.dto';
 import { UpdateSpecializationDto } from './dto/update-specialization.dto';
@@ -13,14 +13,11 @@ export class SpecializationsService {
         return specialization;
     }
     async findAll() {
-        const specializations = await this.prisma.food_specializations.findMany();
+        const specializations = await this.prisma.food_specializations.findMany({ where: { is_active: true } });
         return specializations;
     }
     async findOne(id: string) {
         const specialization = await this.prisma.food_specializations.findUniqueOrThrow({ where: { id } })
-        if(!specialization){
-            throw new NotFoundException('id not found');
-        }
         return specialization;
 
     }
