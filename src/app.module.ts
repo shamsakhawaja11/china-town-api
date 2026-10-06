@@ -1,16 +1,12 @@
 import { ConfigModule } from '@nestjs/config';
-import {
-  MiddlewareConsumer,
-  Module,
-  NestMiddleware,
-  NestModule,
-} from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { envValidationSchema } from './config/env.validation';
 import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
+import { SpecializationsModule } from './modules/specializations/specializations.module';
 
 @Module({
   imports: [
@@ -20,6 +16,7 @@ import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
       isGlobal: true,
       validationSchema: envValidationSchema,
     }),
+    SpecializationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
