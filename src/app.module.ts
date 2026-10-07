@@ -7,6 +7,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { envValidationSchema } from './config/env.validation';
 import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
 import { SpecializationsModule } from './modules/specializations/specializations.module';
+import { UsersModule } from './modules/users/users.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { SpecializationsModule } from './modules/specializations/specializations
       validationSchema: envValidationSchema,
     }),
     SpecializationsModule,
+    UsersModule,
   ],
   controllers: [AppController],
   providers: [AppService],

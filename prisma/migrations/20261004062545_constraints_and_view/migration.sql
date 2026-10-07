@@ -1,12 +1,8 @@
--- ============================================================
 -- 1. Extensions
--- ============================================================
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 CREATE EXTENSION IF NOT EXISTS btree_gist;
 
--- ============================================================
 -- 2. CHECK constraints
--- ============================================================
 
 -- users
 ALTER TABLE users
@@ -121,16 +117,12 @@ ALTER TABLE inventory_transactions
   ADD CONSTRAINT inventory_transactions_quantity_before_check CHECK (quantity_before >= 0),
   ADD CONSTRAINT inventory_transactions_quantity_after_check CHECK (quantity_after >= 0);
 
--- ============================================================
 -- 3. Exclusion constraint: no overlapping active bookings per table
--- ============================================================
 ALTER TABLE reservation_tables
   ADD CONSTRAINT no_double_booking
   EXCLUDE USING gist (table_id WITH =, during WITH &&) WHERE (is_active);
 
--- ============================================================
 -- 4. View: dietary info calculated from ingredients
--- ============================================================
 CREATE VIEW menu_item_dietary_info AS
 SELECT
   mi.id AS menu_item_id,
