@@ -8,6 +8,6 @@ export class AuthService {
     constructor(private usersService:UsersService) { }
     async register(dto: RegisterUserDto) {
         const hashPassword=await argon2.hash(dto.password);
-        return this.usersService.create(dto,hashPassword)
+        return this.usersService.create(dto.name,hashPassword,dto.email,dto.phone,)
     }
 }
