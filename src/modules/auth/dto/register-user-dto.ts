@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { Transform } from "class-transformer";
-import { IsEmail, IsNotEmpty, IsNumber, IsOptional, IsPhoneNumber, IsString, MaxLength, MinLength, ValidateIf } from "class-validator";
+import { IsEmail, IsNotEmpty, IsNumber, IsOptional, IsPhoneNumber, IsString, MaxLength, Max, MinLength, ValidateIf } from "class-validator";
 
 export class RegisterUserDto {
     @IsNotEmpty()
@@ -19,5 +19,6 @@ export class RegisterUserDto {
     phone?: string
     @IsString()
     @IsNotEmpty()
+    @MinLength(6)
     password!: string
 }
