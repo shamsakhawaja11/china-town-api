@@ -1,11 +1,15 @@
-import { Transform } from "class-transformer"
-import { IsNotEmpty, IsOptional, IsString } from "class-validator"
+import { IsNotEmpty, IsOptional, IsString, MaxLength } from "class-validator"
 
 export class LoginUserDto{
     @IsNotEmpty()
-    @Transform(({value})=>value.trim().toLowerCase())
-    contact:string
+    @IsString()
+    contact!:string
     @IsNotEmpty()
+    @MaxLength(50)
+    @IsString()
     password!:string
-    deviceInfo:string
+    @IsOptional()
+    @IsString()
+    @MaxLength(255)
+    deviceInfo?:string
 }
