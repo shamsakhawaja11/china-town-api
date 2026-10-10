@@ -38,11 +38,6 @@ export class AuthService {
     }
     async generateAccessToken(role: string, sub: string) {
         const payload = { role, sub };
-        return this.jwtService.signAsync(payload, {
-            secret:
-                this.configService.getOrThrow<string>('JWT_ACCESS_SECRET'),
-            expiresIn:
-                this.configService.getOrThrow<string>('JWT_ACCESS_EXPIRES_IN') as `${number}${'s'|'d'|'m'|'h'}`,
-        });
+        return this.jwtService.signAsync(payload)
     }
 }
