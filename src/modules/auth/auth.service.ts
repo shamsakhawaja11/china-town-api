@@ -5,11 +5,10 @@ import * as argon2 from 'argon2';
 import { normalizeContact } from '../../common/utils/normalize-contact';
 import { PrismaService } from '../../prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
-import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AuthService {
-    constructor(private usersService: UsersService, private prismaServie: PrismaService, private jwtService: JwtService) { }
+    constructor(private usersService: UsersService, private prismaService: PrismaService, private jwtService: JwtService) { }
     async register(dto: RegisterUserDto) {
         const hashPassword = await argon2.hash(dto.password);
         return this.usersService.create(dto.name, hashPassword, dto.email, dto.phone,)
@@ -20,17 +19,23 @@ export class AuthService {
         if (!contactType) {
             throw new UnauthorizedException('Invalid credentials');
         }
-        const user = contactType?.type == 'phone' ?
-            await this.prismaServie.users.findUnique({
+        const user = contactType.type === 'phone' ?
+            await this.prismaService.users.findUnique({
                 where: { phone: contactType.value }
             }) :
-            await this.prismaServie.users.findUnique({
+            await this.prismaService.users.findUnique({
                 where: { email: contactType.value }
             });
         if (!user || !user.is_active) {
             throw new UnauthorizedException('Invalid credentials');
         }
-        if (await argon2.verify(user.password_hash, password)) {
+        let passwordMatches = false;
+        try {
+            passwordMatches = await argon2.verify(user.password_hash, password);
+        } catch {
+            passwordMatches = false;
+        }
+        if (!passwordMatches) {
             throw new UnauthorizedException('Invalid credentials')
         }
         const { password_hash, ...userWithoutPassword } = user;
