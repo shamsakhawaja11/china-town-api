@@ -4,10 +4,12 @@ import { UsersService } from '../users/users.service';
 import * as argon2 from 'argon2';
 import { normalizeContact } from '../../common/utils/normalize-contact';
 import { PrismaService } from '../../prisma/prisma.service';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AuthService {
-    constructor(private usersService: UsersService, private prismaServie: PrismaService) { }
+    constructor(private usersService: UsersService, private prismaServie: PrismaService, private jwtService: JwtService, private configService: ConfigService) { }
     async register(dto: RegisterUserDto) {
         const hashPassword = await argon2.hash(dto.password);
         return this.usersService.create(dto.name, hashPassword, dto.email, dto.phone,)
@@ -33,5 +35,14 @@ export class AuthService {
         }
         const { password_hash, ...userWithoutPassword } = user;
         return userWithoutPassword;
+    }
+    async generateAccessToken(role: string, sub: string) {
+        const payload = { role, sub };
+        return this.jwtService.signAsync(payload, {
+            secret:
+                this.configService.getOrThrow<string>('JWT_ACCESS_SECRET'),
+            expiresIn:
+                this.configService.getOrThrow<string>('JWT_ACCESS_EXPIRES_IN') as `${number}${'s'|'d'|'m'|'h'}`,
+        });
     }
 }
