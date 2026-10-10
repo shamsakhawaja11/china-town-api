@@ -9,7 +9,7 @@ import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AuthService {
-    constructor(private usersService: UsersService, private prismaServie: PrismaService, private jwtService: JwtService, private configService: ConfigService) { }
+    constructor(private usersService: UsersService, private prismaServie: PrismaService, private jwtService: JwtService) { }
     async register(dto: RegisterUserDto) {
         const hashPassword = await argon2.hash(dto.password);
         return this.usersService.create(dto.name, hashPassword, dto.email, dto.phone,)
@@ -36,8 +36,8 @@ export class AuthService {
         const { password_hash, ...userWithoutPassword } = user;
         return userWithoutPassword;
     }
-    async generateAccessToken(role: string, sub: string) {
-        const payload = { role, sub };
+    async generateAccessToken(user: { role: 'admin' | 'customer' | 'staff', sub: string }) {
+        const payload = { role: user.role, sub: user.sub };
         return this.jwtService.signAsync(payload)
     }
 }
