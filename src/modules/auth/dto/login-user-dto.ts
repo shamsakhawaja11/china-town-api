@@ -5,7 +5,7 @@ export class LoginUserDto{
     @IsString()
     contact!:string
     @IsNotEmpty()
-    @MaxLength(50)
+    @MaxLength(128)
     @IsString()
     password!:string
     @IsOptional()
