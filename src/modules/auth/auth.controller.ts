@@ -1,12 +1,28 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, HttpCode, Post, Req, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterUserDto } from './dto/register-user-dto';
+import { LoginUserDto } from './dto/login-user-dto';
+import { LocalAuthGuard } from './guards/local-auth.guard';
+import type { Request } from 'express';
+
+type AuthenticatedRequest = Request & {
+    user: {
+        id: string,
+        role: 'admin' | 'customer' | 'staff'
+    }
+}
 
 @Controller('auth')
 export class AuthController {
-    constructor(private authService:AuthService) {}
+    constructor(private authService: AuthService) { }
     @Post('register')
-    register(@Body() dto:RegisterUserDto) {
+    register(@Body() dto: RegisterUserDto) {
         return this.authService.register(dto);
+    }
+    @HttpCode(200)
+    @UseGuards(LocalAuthGuard)
+    @Post('login')
+    login(@Req() req: AuthenticatedRequest, @Body() dto: LoginUserDto) {
+        return this.authService.createSession(req.user, dto.deviceInfo);
     }
 }
