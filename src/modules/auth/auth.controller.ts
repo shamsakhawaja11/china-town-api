@@ -4,6 +4,7 @@ import { RegisterUserDto } from './dto/register-user-dto';
 import { LoginUserDto } from './dto/login-user-dto';
 import { LocalAuthGuard } from './guards/local-auth.guard';
 import type { Request } from 'express';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
 
 type AuthenticatedRequest = Request & {
     user: {
@@ -15,14 +16,22 @@ type AuthenticatedRequest = Request & {
 @Controller('auth')
 export class AuthController {
     constructor(private authService: AuthService) { }
+
     @Post('register')
     register(@Body() dto: RegisterUserDto) {
         return this.authService.register(dto);
     }
+
     @HttpCode(200)
     @UseGuards(LocalAuthGuard)
     @Post('login')
     login(@Req() req: AuthenticatedRequest, @Body() dto: LoginUserDto) {
         return this.authService.createSession(req.user, dto.deviceInfo);
     }
+    @HttpCode(200)
+    @Post('refresh')
+    refresh(@Body() token:RefreshTokenDto){
+        return this.authService.refreshSession(token.refreshToken);
+    }
+
 }
