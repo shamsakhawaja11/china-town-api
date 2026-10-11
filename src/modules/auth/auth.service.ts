@@ -7,7 +7,6 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import { createHash, randomBytes } from 'node:crypto';
 import { ConfigService } from '@nestjs/config';
-import { number } from 'joi';
 
 @Injectable()
 export class AuthService {
@@ -23,6 +22,7 @@ export class AuthService {
         if (!contactType) {
             throw new UnauthorizedException('Invalid credentials');
         }
+
         const user = contactType.type === 'phone' ?
             await this.prismaService.users.findUnique({
                 where: { phone: contactType.value }
@@ -30,6 +30,8 @@ export class AuthService {
             await this.prismaService.users.findUnique({
                 where: { email: contactType.value }
             });
+
+
         if (!user || !user.is_active) {
             throw new UnauthorizedException('Invalid credentials');
         }
@@ -82,5 +84,23 @@ export class AuthService {
             }
         })
         return token;
+    }
+
+    async createSession(user: { id: string; role: 'admin' | 'customer' | 'staff' }, deviceInfo ?: string,) {
+
+        const accessToken = await this.generateAccessToken({
+            sub: user.id,
+            role: user.role,
+        });
+
+        const refreshToken = await this.generateRefreshToken(
+            user.id,    
+            deviceInfo,
+        );
+
+        return {
+            access_token: accessToken,
+            refresh_token: refreshToken,
+        };
     }
 }
