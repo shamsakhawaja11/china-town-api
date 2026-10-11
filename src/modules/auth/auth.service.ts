@@ -5,11 +5,13 @@ import * as argon2 from 'argon2';
 import { normalizeContact } from '../../common/utils/normalize-contact';
 import { PrismaService } from '../../prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
-import { createHash } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
+import { ConfigService } from '@nestjs/config';
+import { number } from 'joi';
 
 @Injectable()
 export class AuthService {
-    constructor(private usersService: UsersService, private prismaService: PrismaService, private jwtService: JwtService) { }
+    constructor(private usersService: UsersService, private prismaService: PrismaService, private jwtService: JwtService, private configService: ConfigService) { }
 
     async register(dto: RegisterUserDto) {
         const hashPassword = await argon2.hash(dto.password);
@@ -51,14 +53,34 @@ export class AuthService {
         const hashedToken = createHash('sha256').update(refreshToken).digest('hex')
         const token = await this.prismaService.refresh_tokens.findUnique({ where: { token_hash: hashedToken } })
         if (!token || token.expires_at < new Date()) {
-            throw new UnauthorizedException('invalid credentials');
+            throw new UnauthorizedException('Invalid credentials');
         }
 
         const user = await this.prismaService.users.findUnique({ where: { id: token.user_id } });
         if (!user || !user.is_active) {
-            throw new UnauthorizedException('invalid credentials');
+            throw new UnauthorizedException('Invalid credentials');
         }
         const accessToken = await this.generateAccessToken({ role: user.role, sub: user.id });
         return accessToken;
+    }
+    async generateRefreshToken(userId: string, deviceInfo?: string) {
+        const token = randomBytes(48).toString('base64url');
+        const hashToken = createHash('sha256').update(token).digest('hex');
+        const expiresAt = new Date();
+        const expiresInDays = this.configService.getOrThrow<number>('REFRESH_TOKEN_EXPIRES_DAYS');
+        if (!Number.isInteger(expiresInDays) || expiresInDays <= 0) {
+            throw new Error('Refresh token expires days must be a positive integer');
+        }
+        expiresAt.setDate(expiresAt.getDate() + expiresInDays);
+        await this.prismaService.refresh_tokens.create({
+            data: {
+                user_id: userId,
+                token_hash: hashToken,
+                device_info: deviceInfo,
+                expires_at: expiresAt
+
+            }
+        })
+        return token;
     }
 }
