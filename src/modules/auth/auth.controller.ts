@@ -37,5 +37,17 @@ export class AuthController {
     me(@CurrentUser('id') id: string) {
         return this.authService.me(id);
     }
+    
+    @HttpCode(200)
+    @Post('/logout')
+    logout(@CurrentUser('id') userId: string, @Body() token: RefreshTokenDto) {
+        return this.authService.logout(userId, token.refreshToken);
+    }
+
+    @HttpCode(200)
+    @Post('/logout-all')
+    logoutAll(@CurrentUser('id') userId: string) {
+        return this.authService.logoutAll(userId);
+    }
 
 }
