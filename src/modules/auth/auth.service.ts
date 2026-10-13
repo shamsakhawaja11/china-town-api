@@ -141,4 +141,24 @@ export class AuthService {
             refresh_token: newRefreshToken,
         };
     }
+
+    async me(id: string) {
+        const user = await this.prismaService.users.findUnique({
+            where: { id },
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                phone: true,
+                role: true,
+                is_active: true,
+                created_at: true,
+            },
+        });
+
+        if (!user || !user.is_active) {
+            throw new UnauthorizedException('Invalid credentials');
+        }
+        return user;
+    }
 }
