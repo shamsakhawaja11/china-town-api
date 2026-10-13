@@ -8,6 +8,7 @@ import { envValidationSchema } from './config/env.validation';
 import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
 import { SpecializationsModule } from './modules/specializations/specializations.module';
 import { UsersModule } from './modules/users/users.module';
+import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 
 @Module({
   imports: [
@@ -21,7 +22,12 @@ import { UsersModule } from './modules/users/users.module';
     UsersModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService,
+    {
+      provide:'APP_GUARD',
+      useClass:JwtAuthGuard
+    },
+  ],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

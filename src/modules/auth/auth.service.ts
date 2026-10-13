@@ -1,5 +1,5 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { RegisterUserDto } from './dto/register-user-dto';
+import { RegisterUserDto } from './dto/register-user.dto';
 import { UsersService } from '../users/users.service';
 import * as argon2 from 'argon2';
 import { normalizeContact } from '../../common/utils/normalize-contact';
