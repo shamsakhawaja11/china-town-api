@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { RegisterUserDto } from './dto/register-user.dto';
 import { UsersService } from '../users/users.service';
 import * as argon2 from 'argon2';
@@ -7,12 +7,12 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import { createHash, randomBytes } from 'node:crypto';
 import { ConfigService } from '@nestjs/config';
-import { Prisma } from '../../generated/prisma/browser';
+import { Prisma } from '../../generated/prisma/client';
 
 @Injectable()
 export class AuthService {
     constructor(private usersService: UsersService, private prismaService: PrismaService, private jwtService: JwtService, private configService: ConfigService) { }
-
+    private logger = new Logger(AuthService.name);
     async register(dto: RegisterUserDto) {
         const hashPassword = await argon2.hash(dto.password);
         return this.usersService.create(dto.name, hashPassword, dto.email, dto.phone,)
@@ -55,8 +55,8 @@ export class AuthService {
 
     async generateRefreshToken(userId: string, deviceInfo?: string, tx?: Prisma.TransactionClient) {
         const prisma = tx ?? this.prismaService;
-        const token = randomBytes(48).toString('base64url');
-        const hashToken = createHash('sha256').update(token).digest('hex');
+        const refreshToken = randomBytes(48).toString('base64url');
+        const hashToken = this.generateHashToken(refreshToken);
         const expiresAt = new Date();
         const expiresInDays = this.configService.getOrThrow<number>('REFRESH_TOKEN_EXPIRES_DAYS');
         if (!Number.isInteger(expiresInDays) || expiresInDays <= 0) {
@@ -73,7 +73,7 @@ export class AuthService {
             }
         })
 
-        return token;
+        return refreshToken;
     }
 
     async createSession(user: { id: string; role: 'admin' | 'customer' | 'staff' }, deviceInfo?: string, tx?: Prisma.TransactionClient) {
@@ -96,7 +96,7 @@ export class AuthService {
     }
 
     async refreshSession(refreshToken: string) {
-        const hashToken = createHash('sha256').update(refreshToken).digest('hex');
+        const hashToken = this.generateHashToken(refreshToken);
         const validToken = await this.prismaService.refresh_tokens.findUnique({
             where: { token_hash: hashToken },
         });
@@ -137,8 +137,8 @@ export class AuthService {
         const newAccessToken = await this.generateAccessToken({ role: user.role, sub: user.id });
 
         return {
-            access_token: newAccessToken,
-            refresh_token: newRefreshToken,
+            accessToken: newAccessToken,
+            refreshToken: newRefreshToken,
         };
     }
 
@@ -161,4 +161,40 @@ export class AuthService {
         }
         return user;
     }
+
+    async logout(id: string, refreshToken: string) {
+        const hashToken = this.generateHashToken(refreshToken);
+        const result = await this.prismaService.refresh_tokens.updateMany({
+            where: {
+                user_id: id,
+                token_hash: hashToken,
+                revoked_at: null,
+            },
+            data: {
+                revoked_at: new Date()
+            }
+        });
+        this.logger.log(`user ${id} logout at ${Date.now()} ${result.count}`);
+    }
+
+    async logoutAll(userId: string) {
+        const result = await this.prismaService.refresh_tokens.updateMany({
+            where: {
+                user_id: userId,
+                revoked_at: null,
+            },
+            data: {
+                revoked_at: new Date()
+
+            }
+
+        });
+        this.logger.log(`user ${userId} logout at ${Date.now()} ${result.count}`);
+    }
+
+    private generateHashToken(refreshToken: string) {
+        const token = createHash('sha256').update(refreshToken).digest('hex');
+        return token;
+    }
+
 }
