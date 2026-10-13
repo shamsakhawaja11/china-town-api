@@ -1,4 +1,4 @@
-import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { RegisterUserDto } from './dto/register-user.dto';
 import { UsersService } from '../users/users.service';
 import * as argon2 from 'argon2';
@@ -8,6 +8,7 @@ import { JwtService } from '@nestjs/jwt';
 import { createHash, randomBytes } from 'node:crypto';
 import { ConfigService } from '@nestjs/config';
 import { Prisma } from '../../generated/prisma/client';
+import { ChangePasswordDto } from './dto/change-password.dto';
 
 @Injectable()
 export class AuthService {
@@ -58,7 +59,10 @@ export class AuthService {
         const refreshToken = randomBytes(48).toString('base64url');
         const hashToken = this.generateHashToken(refreshToken);
         const expiresAt = new Date();
-        const expiresInDays = this.configService.getOrThrow<number>('REFRESH_TOKEN_EXPIRES_DAYS');
+        const expiresInDays = Number(
+            this.configService.getOrThrow<string>('REFRESH_TOKEN_EXPIRES_DAYS')
+        );
+
         if (!Number.isInteger(expiresInDays) || expiresInDays <= 0) {
             throw new Error('Refresh token expires days must be a positive integer');
         }
@@ -192,9 +196,62 @@ export class AuthService {
         this.logger.log(`user ${userId} logout at ${Date.now()} ${result.count}`);
     }
 
+    async changePassword(userId: string, password: ChangePasswordDto) {
+        const user = await this.prismaService.users.findUnique({
+            where: { id: userId }
+        });
+
+        if (!user || !user.is_active) {
+            throw new UnauthorizedException('Invalid credentials');
+        }
+
+        let passwordMatches = false;
+
+        try {
+            passwordMatches = await argon2.verify(
+                user.password_hash,
+                password.currentPassword
+            );
+        } catch {
+            passwordMatches = false;
+        }
+
+        if (!passwordMatches) {
+            throw new UnauthorizedException('Invalid credentials');
+        }
+
+        if (password.currentPassword === password.newPassword) {
+            throw new BadRequestException('New password must be different from the current password');
+        }
+
+        const hashPassword = await argon2.hash(password.newPassword);
+
+        await this.prismaService.$transaction(async (tx) => {
+            await tx.users.update({
+                where: { id: userId },
+                data: { password_hash: hashPassword }
+            });
+
+            await tx.refresh_tokens.updateMany({
+                where: {
+                    user_id: userId,
+                    revoked_at: null
+                },
+                data: { revoked_at: new Date() }
+            });
+        });
+
+        this.logger.log(`Password changed for user ${userId}`);
+
+        return { message: 'Password changed successfully' };
+    }
+
+
     private generateHashToken(refreshToken: string) {
         const token = createHash('sha256').update(refreshToken).digest('hex');
         return token;
     }
+
+
 
 }
