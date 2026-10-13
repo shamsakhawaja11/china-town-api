@@ -1,24 +1,19 @@
-import { Body, Controller, HttpCode, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Post, Req, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterUserDto } from './dto/register-user.dto';
 import { LoginUserDto } from './dto/login-user.dto';
 import { LocalAuthGuard } from './guards/local-auth.guard';
-import type { Request } from 'express';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { Public } from '../../common/decorators/public.decorator';
-
-type AuthenticatedRequest = Request & {
-    user: {
-        id: string,
-        role: 'admin' | 'customer' | 'staff'
-    }
-}
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { JwtUserType } from '../../common/types/jwt-user.type';
 
 @Controller('auth')
 export class AuthController {
     constructor(private authService: AuthService) { }
+
     @Public()
-    @Post('register')
+    @Post('/register')
     register(@Body() dto: RegisterUserDto) {
         return this.authService.register(dto);
     }
@@ -26,15 +21,21 @@ export class AuthController {
     @HttpCode(200)
     @Public()
     @UseGuards(LocalAuthGuard)
-    @Post('login')
-    login(@Req() req: AuthenticatedRequest, @Body() dto: LoginUserDto) {
-        return this.authService.createSession(req.user, dto.deviceInfo);
+    @Post('/login')
+    login(@CurrentUser() user: JwtUserType, @Body() dto: LoginUserDto) {
+        return this.authService.createSession(user, dto.deviceInfo);
     }
+
     @HttpCode(200)
     @Public()
-    @Post('refresh')
-    refresh(@Body() token:RefreshTokenDto){
+    @Post('/refresh')
+    refresh(@Body() token: RefreshTokenDto) {
         return this.authService.refreshSession(token.refreshToken);
+    }
+
+    @Get('/me')
+    me(@CurrentUser('id') id: string) {
+        return this.authService.me(id);
     }
 
 }
