@@ -13,6 +13,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { RolesGuard } from './modules/auth/guards/roles.guard';
 import { RestaurantsModule } from './modules/restaurants/restaurants.module';
 import { StaffModule } from './modules/staff/staff.module';
+import { MenuCategoriesModule } from './modules/menu/menu-categories.module';
 
 @Module({
   imports: [
@@ -23,7 +24,7 @@ import { StaffModule } from './modules/staff/staff.module';
       validationSchema: envValidationSchema,
     }),
     SpecializationsModule,
-    UsersModule, RestaurantsModule, StaffModule,
+    UsersModule, RestaurantsModule, StaffModule,MenuCategoriesModule
   ],
   controllers: [AppController],
   providers: [AppService,
