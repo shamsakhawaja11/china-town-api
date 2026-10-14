@@ -6,5 +6,12 @@ import { Transform } from "class-transformer";
 export class UpdateMenuCategoryDto extends PartialType(
     OmitType(CreateMenuCategoryDto, ['restaurantId'] as const)
 ) { 
-   
+    @IsBoolean()
+    @IsOptional()
+    @Transform(({value})=>{
+        if(value === 'true') return true;
+        if(value === 'false') return false;
+        return value
+    })
+    isActive?:boolean
 }
