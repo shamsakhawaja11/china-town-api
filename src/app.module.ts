@@ -11,6 +11,7 @@ import { UsersModule } from './modules/users/users.module';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 import { APP_GUARD } from '@nestjs/core';
 import { RolesGuard } from './modules/auth/guards/roles.guard';
+import { RestaurantsModule } from './modules/restaurants/restaurants.module';
 
 @Module({
   imports: [
@@ -21,7 +22,7 @@ import { RolesGuard } from './modules/auth/guards/roles.guard';
       validationSchema: envValidationSchema,
     }),
     SpecializationsModule,
-    UsersModule,
+    UsersModule, RestaurantsModule,
   ],
   controllers: [AppController],
   providers: [AppService,
