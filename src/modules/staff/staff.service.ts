@@ -37,12 +37,12 @@ export class StaffService {
                         restaurant_id: dto.restaurantId,
                         staff_type: dto.staffType,
                         position: dto.position
-                    },include:{
-                        users:{
-                            select:{
-                                name:true,
-                                phone:true,
-                                email:true
+                    }, include: {
+                        users: {
+                            select: {
+                                name: true,
+                                phone: true,
+                                email: true
                             }
                         }
                     }
@@ -65,12 +65,31 @@ export class StaffService {
             throw err;
         }
     }
-    async toResponse(staff: StaffWithUser) {
+
+
+    async getOne(id: string) {
+        const staff = await this.findOrThrow(id);
+        return this.toResponse(staff);
+    }
+
+    async findOrThrow(id: string) {
+        const staff = await this.prismaService.staff.findUnique({
+            where:
+                { id },
+            include:
+                { users: { select: { name: true, phone: true, email: true } } }
+        });
+        if (!staff) throw new NotFoundException('Staff not found');
+        return staff;
+    }
+
+
+    private toResponse(staff: StaffWithUser) {
         return {
             id: staff.id,
             name: staff.users.name,
             phone: staff.users.phone,
-            email: staff.users?.email,
+            email: staff.users.email,
             restaurantId: staff.restaurant_id,
             staffType: staff.staff_type,
             position: staff.position,
@@ -78,5 +97,4 @@ export class StaffService {
             isActive: staff.is_active
         }
     }
-    
 }
