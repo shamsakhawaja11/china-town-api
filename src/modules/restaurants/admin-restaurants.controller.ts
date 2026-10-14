@@ -5,7 +5,6 @@ import { UpdateRestaurantDto } from "./dto/update-restaurant.dto";
 import { Roles } from "../../common/decorators/roles.decorator";
 import { RolesGuard } from "../auth/guards/roles.guard";
 
-@UseGuards(RolesGuard)
 @Controller('admin/restaurants')
 export class AdminRestaurantsController {
     constructor(private restaurantsService: RestaurantsService) { }
