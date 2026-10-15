@@ -14,13 +14,5 @@ export class MenuCategoriesController {
         return this.menuCategoriesService.findAllActive(restaurantId);
     }
 
-    @Post()
-    create(@Body() dto: CreateMenuCategoryDto) {
-        return this.menuCategoriesService.create(dto);
-    }
-
-    @Patch(':id')
-    update(@Param('id') id: string, @Body() dto: UpdateMenuCategoryDto) {
-        return this.menuCategoriesService.update(id, dto);
-    }
+   
 }
