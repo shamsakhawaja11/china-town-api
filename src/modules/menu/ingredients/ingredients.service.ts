@@ -1,12 +1,35 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { CreateIngredientDto } from './dto/create-ingredient.dto';
+import {
+    BadRequestException,
+    ConflictException,
+    Injectable,
+    NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { Prisma } from '../../../generated/prisma/client';
+import { CreateIngredientDto } from './dto/create-ingredient.dto';
 import { UpdateIngredientDto } from './dto/update-ingredient.dto';
+
+const ingredientInclude = {
+    ingredient_allergens: {
+        include: { allergens: { select: { id: true, name: true } } },
+    },
+} satisfies Prisma.ingredientsInclude;
+
+type IngredientWithAllergens = Prisma.ingredientsGetPayload<{
+    include: typeof ingredientInclude;
+}>;
 
 @Injectable()
 export class IngredientsService {
     constructor(private readonly prisma: PrismaService) { }
+
+    private toResponse(ingredient: IngredientWithAllergens) {
+        const { ingredient_allergens, ...rest } = ingredient;
+        return {
+            ...rest,
+            allergens: ingredient_allergens.map((ia) => ia.allergens),
+        };
+    }
 
     async create(dto: CreateIngredientDto) {
         if (dto.isVegan && !dto.isVegetarian) {
@@ -36,24 +59,34 @@ export class IngredientsService {
                         },
                     },
                 },
-                include: {
-                    ingredient_allergens: {
-                        include: { allergens: { select: { id: true, name: true } } },
-                    },
-                },
+                include: ingredientInclude,
             });
-
-            const { ingredient_allergens, ...rest } = ingredient;
-            return {
-                ...rest,
-                allergens: ingredient_allergens.map((ia) => ia.allergens),
-            };
+            return this.toResponse(ingredient);
         } catch (error) {
             if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
                 throw new ConflictException('Ingredient name already exists');
             }
             throw error;
         }
+    }
+
+    async findAll() {
+        const ingredients = await this.prisma.ingredients.findMany({
+            include: ingredientInclude,
+            orderBy: { name: 'asc' },
+        });
+        return ingredients.map((i) => this.toResponse(i));
+    }
+
+    async findOne(id: string) {
+        const ingredient = await this.prisma.ingredients.findUnique({
+            where: { id },
+            include: ingredientInclude,
+        });
+        if (!ingredient) {
+            throw new NotFoundException('Ingredient not found');
+        }
+        return this.toResponse(ingredient);
     }
 
     async update(id: string, dto: UpdateIngredientDto) {
@@ -107,18 +140,9 @@ export class IngredientsService {
 
                 const updated = await tx.ingredients.findUniqueOrThrow({
                     where: { id },
-                    include: {
-                        ingredient_allergens: {
-                            include: { allergens: { select: { id: true, name: true } } },
-                        },
-                    },
+                    include: ingredientInclude,
                 });
-
-                const { ingredient_allergens, ...rest } = updated;
-                return {
-                    ...rest,
-                    allergens: ingredient_allergens.map((ia) => ia.allergens),
-                };
+                return this.toResponse(updated);
             });
         } catch (error) {
             if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
