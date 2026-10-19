@@ -6,7 +6,7 @@ export class AllergensService {
     constructor(private prisma: PrismaService) { }
 
     async findAll() {
-        const allergen = await this.prisma.allergens.findMany({
+        const allergens = await this.prisma.allergens.findMany({
             select: {
                 id: true,
                 name: true,
@@ -14,6 +14,6 @@ export class AllergensService {
             },
             orderBy: { name: 'asc' }
         });
-        return allergen;
+        return allergens;
     }
 }
