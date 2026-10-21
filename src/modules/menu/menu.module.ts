@@ -4,9 +4,10 @@ import { MenuCategoriesService } from "./menu-categories.service";
 import { MenuCategoriesAdminController } from "./menu-categories-admin.controller";
 import { IngredientsModule } from "./ingredients/ingredients.module";
 import { AllergensModule } from "./allergens/allergens.module";
+import { MenuItemsModule } from "./menu-items/menu-items.module";
 
 @Module({
-    imports: [IngredientsModule,AllergensModule],
+    imports: [IngredientsModule, AllergensModule, MenuItemsModule],
     controllers: [MenuCategoriesController, MenuCategoriesAdminController],
     providers: [MenuCategoriesService],
     exports: []
