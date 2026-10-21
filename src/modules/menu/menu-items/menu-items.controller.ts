@@ -1,8 +1,9 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post } from "@nestjs/common";
+import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Put } from "@nestjs/common";
 import { Roles } from "../../../common/decorators/roles.decorator";
 import { CreateMenuItemDto } from "./dto/create-menu-item.dto";
 import { UpdateMenuItemDto } from "./dto/update-menu-item.dto";
 import { MenuItemsService } from "./menu-item.service";
+import { ReplaceMenuItemIngredientsDto } from "./dto/replace-menu-item-ingredients.dto";
 @Roles('admin')
 @Controller('admin/menu/items')
 export class MenuItemsController {
@@ -26,5 +27,11 @@ export class MenuItemsController {
     @Patch(':id')
     update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateMenuItemDto) {
         return this.menuItemService.update(id, dto)
+    }
+
+
+    @Put(':id/ingredients')
+    replaceIngredients(@Param('id', ParseUUIDPipe) id: string, @Body() dto: ReplaceMenuItemIngredientsDto) {
+        return this.menuItemService.replaceIngredients(id, dto);
     }
 }
