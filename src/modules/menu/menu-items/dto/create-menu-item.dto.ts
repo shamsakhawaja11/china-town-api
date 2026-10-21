@@ -3,7 +3,6 @@ import { ArrayMinSize, ArrayUnique, IsArray, IsBoolean, IsEnum, IsInt, IsNotEmpt
 import { Trim } from "../../../../common/transformers/trim.transformer"
 import { spice_level_enum } from "../../../../generated/prisma/enums"
 import { MenuItemIngredientDto } from "./menu-item-ingredient.dto"
-import { CreateSpecializationDto } from "../../../specializations/dto/create-specialization.dto"
 
 export class CreateMenuItemDto {
     @IsUUID('4')
@@ -54,6 +53,5 @@ export class CreateMenuItemDto {
     @IsOptional()
     @ArrayUnique()
     @IsArray()
-    @Type(() => CreateSpecializationDto)
     specializationIds?: string[]
 }

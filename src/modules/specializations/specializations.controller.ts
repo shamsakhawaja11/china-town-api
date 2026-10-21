@@ -2,9 +2,12 @@ import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post } from '@nestj
 import { SpecializationsService } from './specializations.service';
 import { CreateSpecializationDto } from './dto/create-specialization.dto';
 import { UpdateSpecializationDto } from './dto/update-specialization.dto';
+import { Roles } from '../../common/decorators/roles.decorator';
 
-@Controller('specializations')
-export class SpecializationsController {
+
+@Roles('admin')
+@Controller('/admin/specializations')
+export class AdminSpecializationsController {
     constructor(private readonly specializationService:SpecializationsService) {}
 
     @Post()

@@ -24,8 +24,8 @@ export class CreateIngredientDto {
     isVegan!: boolean
 
     @IsOptional()
-   @IsArray({message:'allergens ids must be an array'})
-   @ArrayUnique({message:'duplicate allergens ids are not allowed'})
-   @IsUUID('4',{each:true,message:'Each allergens id must be UUID'})
-    allergenIds?:string[]
+    @IsArray({ message: 'allergens ids must be an array' })
+    @ArrayUnique({ message: 'duplicate allergens ids are not allowed' })
+    @IsUUID('4', { each: true, message: 'Each allergens id must be UUID' })
+    allergenIds?: string[]
 }

@@ -132,7 +132,6 @@ CREATE TABLE menu_items (
   name                     varchar(150) NOT NULL,
   description              text,
   price                    decimal(10,2) NOT NULL CHECK (price >= 0),
-  image_url                text,
   spice_level              spice_level_enum NOT NULL DEFAULT 'none',
   is_available             boolean NOT NULL DEFAULT true,
   preparation_time_minutes integer CHECK (preparation_time_minutes > 0),

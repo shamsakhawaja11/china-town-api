@@ -2,7 +2,9 @@ import { Body, Controller, Get, Param, ParseEnumPipe, ParseUUIDPipe, Patch, Post
 import { IngredientsService } from "./ingredients.service";
 import { UpdateIngredientDto } from "./dto/update-ingredient.dto";
 import { CreateIngredientDto } from "./dto/create-ingredient.dto";
+import { Roles } from "../../../common/decorators/roles.decorator";
 
+@Roles('admin')
 @Controller('admin/ingredients')
 export class IngredientController {
     constructor(private ingredients:IngredientsService) { }

@@ -4,6 +4,7 @@ import { Transform } from "class-transformer";
 import { Trim } from "../../../common/transformers/trim.transformer";
 
 export class UpdateStaffDto {
+    
     @ValidateIf((_, value) => value !== undefined)
     @IsEnum(staff_type_enum)
     staffType?: staff_type_enum;

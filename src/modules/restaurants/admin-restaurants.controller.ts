@@ -1,9 +1,8 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post } from "@nestjs/common";
 import { RestaurantsService } from "./restaurants.service";
 import { CreateRestaurantDto } from "./dto/create-restaurant.dto";
 import { UpdateRestaurantDto } from "./dto/update-restaurant.dto";
 import { Roles } from "../../common/decorators/roles.decorator";
-import { RolesGuard } from "../auth/guards/roles.guard";
 
 @Controller('admin/restaurants')
 export class AdminRestaurantsController {
