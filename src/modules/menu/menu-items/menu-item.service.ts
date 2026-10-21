@@ -13,7 +13,7 @@ const menuItemInclude = {
             ingredients: {
                 include: {
                     ingredient_allergens: {
-                        include: { allergens: { select: { name: true } } },
+                        include: { allergens: { select: { id:true,name: true } } },
                     },
                 },
             },
