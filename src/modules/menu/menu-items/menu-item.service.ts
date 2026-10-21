@@ -4,6 +4,7 @@ import { Prisma } from '../../../generated/prisma/client';
 import { CreateMenuItemDto } from './dto/create-menu-item.dto';
 import { UpdateMenuItemDto } from './dto/update-menu-item.dto';
 import { ReplaceMenuItemIngredientsDto } from './dto/replace-menu-item-ingredients.dto';
+import { ReplaceMenuItemSpecializationsDto } from './replace-menu-item-specializations.dto';
 
 const menuItemInclude = {
     menu_categories: { select: { id: true, name: true } },
@@ -208,7 +209,7 @@ export class MenuItemsService {
                 where: { id: { in: ingredientIds }, is_active: true },
             });
             if (ingredientCount !== ingredientIds.length) {
-                throw new BadRequestxception(
+                throw new BadRequestException(
                     'One or more ingredients do not exist or are inactive',
                 );
             }
@@ -225,6 +226,45 @@ export class MenuItemsService {
                     quantity_required: i.quantityRequired,
                 })),
             });
+        });
+
+        return this.findOne(id);
+    }
+    async replaceSpecializations(id: string, dto: ReplaceMenuItemSpecializationsDto) {
+        const specializationIds = dto.specializationIds;
+
+        await this.prisma.$transaction(async (tx) => {
+            const item = await tx.menu_items.findUnique({
+                where: { id },
+                select: { id: true },
+            });
+            if (!item) {
+                throw new NotFoundException('Menu item not found');
+            }
+
+            if (specializationIds.length > 0) {
+                const count = await tx.food_specializations.count({
+                    where: { id: { in: specializationIds }, is_active: true },
+                });
+                if (count !== specializationIds.length) {
+                    throw new BadRequestException(
+                        'One or more specializations do not exist or are inactive',
+                    );
+                }
+            }
+
+            await tx.menu_item_specializations.deleteMany({
+                where: { menu_item_id: id },
+            });
+
+            if (specializationIds.length > 0) {
+                await tx.menu_item_specializations.createMany({
+                    data: specializationIds.map((specialization_id) => ({
+                        menu_item_id: id,
+                        specialization_id,
+                    })),
+                });
+            }
         });
 
         return this.findOne(id);
