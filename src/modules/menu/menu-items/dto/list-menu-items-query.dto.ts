@@ -1,6 +1,8 @@
 import { Transform, Type } from "class-transformer"
-import { IsIn, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID, Max, MaxLength, Min } from "class-validator"
+import { IsEnum, IsIn, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID, Max, MaxLength, Min, ValidateIf } from "class-validator"
 import { Trim } from "../../../../common/transformers/trim.transformer"
+import { spice_level_enum } from "../../../../generated/prisma/enums"
+import { ToBoolean } from "../../../../common/transformers/to-transformer.boolean"
 
 export class ListMenuItemsQueryDto {
 
@@ -39,4 +41,16 @@ export class ListMenuItemsQueryDto {
     @IsNumber({ maxDecimalPlaces: 2 })
     @Min(0)
     maxPrice?: number
+
+    @IsOptional()
+    @IsEnum(spice_level_enum)
+    spiceLevel?:spice_level_enum
+
+    @IsOptional()
+    @Transform(ToBoolean)
+    isVegetarian?:boolean
+
+    @IsOptional()
+    @Transform(ToBoolean)
+    isVegan?:boolean
 }
