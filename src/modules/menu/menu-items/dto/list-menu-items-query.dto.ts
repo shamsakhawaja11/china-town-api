@@ -5,6 +5,15 @@ import { spice_level_enum } from "../../../../generated/prisma/enums"
 import { ToBoolean } from "../../../../common/transformers/to-transformer.boolean"
 import { ToStringArray } from "../../../../common/transformers/to-string-array.transformer"
 
+
+export const MENU_ITEM_SORT_FIELDS = [
+    'name',
+    'price',
+    'preparationTimeMinutes',
+    'rating',
+] as const;
+export type MenuItemSortField = (typeof MENU_ITEM_SORT_FIELDS)[number];
+
 export class ListMenuItemsQueryDto {
 
     @IsOptional()
@@ -62,5 +71,13 @@ export class ListMenuItemsQueryDto {
     @ArrayMaxSize(20)
     @IsUUID('4', { each: true })
     excludeAllergenIds?: string[];
+
+    @IsOptional()
+    @IsIn(MENU_ITEM_SORT_FIELDS)
+    sortBy: MenuItemSortField = 'name';
+
+    @IsOptional()
+    @IsIn(['asc', 'desc'])
+    order: 'asc' | 'desc' = 'asc';
 
 }
