@@ -1,5 +1,6 @@
-import { Type } from "class-transformer"
-import { IsIn, IsInt, IsOptional, IsUUID, Max, Min } from "class-validator"
+import { Transform, Type } from "class-transformer"
+import { IsIn, IsInt, IsOptional, IsUUID, Max, MaxLength, Min } from "class-validator"
+import { Trim } from "../../../../common/transformers/trim.transformer"
 
 export class ListMenuItemsQueryDto{
 
@@ -19,4 +20,9 @@ export class ListMenuItemsQueryDto{
     @IsOptional()
     @IsUUID('4')
     categoryId?:string
+
+    @Transform(Trim)
+    @MaxLength(150)
+    @IsOptional()
+    search?:string
 }
