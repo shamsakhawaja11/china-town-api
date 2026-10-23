@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, Search } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { Prisma } from '../../../generated/prisma/client';
 import { CreateMenuItemDto } from './dto/create-menu-item.dto';
@@ -274,11 +274,20 @@ export class MenuItemsService {
     async findPublic(query: ListMenuItemsQueryDto) {
         const page = query.page ?? 1;
         const limit = query.limit ?? 20;
+        const search = query.search?.trim();
 
         const where: Prisma.menu_itemsWhereInput = {
             is_available: true,
             menu_categories: { is_active: true },
             category_id: query.categoryId,
+            ...(search
+                ? {
+                    OR: [
+                        { name: { contains: search, mode: 'insensitive' } },
+                        { description: { contains: search, mode: 'insensitive' } },
+                    ],
+                }
+                : {}),
         };
 
         const [rows, total] = await this.prisma.$transaction([
