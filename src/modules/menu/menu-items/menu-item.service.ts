@@ -4,7 +4,8 @@ import { Prisma } from '../../../generated/prisma/client';
 import { CreateMenuItemDto } from './dto/create-menu-item.dto';
 import { UpdateMenuItemDto } from './dto/update-menu-item.dto';
 import { ReplaceMenuItemIngredientsDto } from './dto/replace-menu-item-ingredients.dto';
-import { ReplaceMenuItemSpecializationsDto } from './replace-menu-item-specializations.dto';
+import { ReplaceMenuItemSpecializationsDto } from './dto/replace-menu-item-specializations.dto';
+import { ListMenuItemsQueryDto } from './dto/list-menu-items-query.dto';
 
 const menuItemInclude = {
     menu_categories: { select: { id: true, name: true } },
@@ -13,7 +14,7 @@ const menuItemInclude = {
             ingredients: {
                 include: {
                     ingredient_allergens: {
-                        include: { allergens: { select: { id:true,name: true } } },
+                        include: { allergens: { select: { id: true, name: true } } },
                     },
                 },
             },
@@ -268,5 +269,35 @@ export class MenuItemsService {
         });
 
         return this.findOne(id);
+    }
+
+    async findPublic(query: ListMenuItemsQueryDto) {
+        const page = query.page ?? 1;
+        const limit = query.limit ?? 20;
+
+        const where: Prisma.menu_itemsWhereInput = {
+            is_available: true,
+            menu_categories: { is_active: true },
+            category_id: query.categoryId,
+        };
+
+        const [rows, total] = await this.prisma.$transaction([
+            this.prisma.menu_items.findMany({
+                where,
+                include: menuItemInclude,
+                orderBy: { name: 'asc' },
+                skip: (page - 1) * limit,
+                take: limit,
+            }),
+            this.prisma.menu_items.count({ where }),
+        ]);
+
+        return {
+            items: rows.map((row) => this.toResponse(row)),
+            page,
+            limit,
+            total,
+            hasNextPage: page * limit < total,
+        };
     }
 }
