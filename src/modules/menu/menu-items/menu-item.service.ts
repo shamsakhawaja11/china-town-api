@@ -276,14 +276,17 @@ export class MenuItemsService {
         const limit = query.limit ?? 20;
         const search = query.search?.trim();
         const { minPrice, maxPrice } = query;
+        const excludeAllergenIds = query.excludeAllergenIds ?? [];
 
         if (minPrice !== undefined && maxPrice !== undefined && minPrice > maxPrice) {
             throw new BadRequestException('minPrice cannot be greater than maxPrice');
         }
+
         
-        const dietary: Prisma.menu_itemsWhereInput[] = [];
+        const conditions: Prisma.menu_itemsWhereInput[] = [];
+
         if (query.isVegetarian === true) {
-            dietary.push({
+            conditions.push({
                 menu_item_ingredients: {
                     some: {},
                     none: { ingredients: { is_vegetarian: false } },
@@ -291,10 +294,23 @@ export class MenuItemsService {
             });
         }
         if (query.isVegan === true) {
-            dietary.push({
+            conditions.push({
                 menu_item_ingredients: {
                     some: {},
                     none: { ingredients: { is_vegan: false } },
+                },
+            });
+        }
+        if (excludeAllergenIds.length > 0) {
+            conditions.push({
+                menu_item_ingredients: {
+                    none: {
+                        ingredients: {
+                            ingredient_allergens: {
+                                some: { allergen_id: { in: excludeAllergenIds } },
+                            },
+                        },
+                    },
                 },
             });
         }
@@ -315,7 +331,7 @@ export class MenuItemsService {
                     ],
                 }
                 : {}),
-            ...(dietary.length > 0 ? { AND: dietary } : {}),
+            ...(conditions.length > 0 ? { AND: conditions } : {}),
         };
 
         const [rows, total] = await this.prisma.$transaction([
