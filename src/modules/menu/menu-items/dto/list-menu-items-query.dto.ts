@@ -1,5 +1,5 @@
 import { Transform, Type } from "class-transformer"
-import { IsIn, IsInt, IsOptional, IsUUID, Max, MaxLength, Min } from "class-validator"
+import { IsIn, IsInt, IsNotEmpty, IsOptional, IsString, IsUUID, Max, MaxLength, Min } from "class-validator"
 import { Trim } from "../../../../common/transformers/trim.transformer"
 
 export class ListMenuItemsQueryDto{
@@ -24,5 +24,7 @@ export class ListMenuItemsQueryDto{
     @Transform(Trim)
     @MaxLength(150)
     @IsOptional()
+    @IsString()
+    @IsNotEmpty()
     search?:string
 }
