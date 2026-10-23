@@ -1,8 +1,9 @@
 import { Transform, Type } from "class-transformer"
-import { IsEnum, IsIn, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID, Max, MaxLength, Min, ValidateIf } from "class-validator"
+import { ArrayMaxSize, ArrayUnique, IsArray, IsEnum, IsIn, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID, Max, MaxLength, Min, ValidateIf } from "class-validator"
 import { Trim } from "../../../../common/transformers/trim.transformer"
 import { spice_level_enum } from "../../../../generated/prisma/enums"
 import { ToBoolean } from "../../../../common/transformers/to-transformer.boolean"
+import { ToStringArray } from "../../../../common/transformers/to-string-array.transformer"
 
 export class ListMenuItemsQueryDto {
 
@@ -44,13 +45,22 @@ export class ListMenuItemsQueryDto {
 
     @IsOptional()
     @IsEnum(spice_level_enum)
-    spiceLevel?:spice_level_enum
+    spiceLevel?: spice_level_enum
 
     @IsOptional()
     @Transform(ToBoolean)
-    isVegetarian?:boolean
+    isVegetarian?: boolean
 
     @IsOptional()
     @Transform(ToBoolean)
-    isVegan?:boolean
+    isVegan?: boolean
+
+    @IsOptional()
+    @Transform(ToStringArray)
+    @IsArray()
+    @ArrayUnique()
+    @ArrayMaxSize(20)
+    @IsUUID('4', { each: true })
+    excludeAllergenIds?: string[];
+
 }
