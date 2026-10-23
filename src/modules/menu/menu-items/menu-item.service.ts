@@ -275,11 +275,20 @@ export class MenuItemsService {
         const page = query.page ?? 1;
         const limit = query.limit ?? 20;
         const search = query.search?.trim();
+        const minPrice = query.minPrice;
+        const maxPrice = query.maxPrice;
+
+        if (minPrice!==undefined && maxPrice!==undefined && minPrice > maxPrice) throw new BadRequestException('Min price greater than Max price');
+
 
         const where: Prisma.menu_itemsWhereInput = {
             is_available: true,
             menu_categories: { is_active: true },
             category_id: query.categoryId,
+            OR:[
+                {price:{gte:minPrice}},
+                {price:{lte:maxPrice}}
+            ],
             ...(search
                 ? {
                     OR: [
@@ -309,4 +318,5 @@ export class MenuItemsService {
             hasNextPage: page * limit < total,
         };
     }
+
 }
