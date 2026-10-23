@@ -4,7 +4,7 @@ import { CreateMenuItemDto } from "./dto/create-menu-item.dto";
 import { UpdateMenuItemDto } from "./dto/update-menu-item.dto";
 import { MenuItemsService } from "./menu-item.service";
 import { ReplaceMenuItemIngredientsDto } from "./dto/replace-menu-item-ingredients.dto";
-import { ReplaceMenuItemSpecializationsDto } from "./replace-menu-item-specializations.dto";
+import { ReplaceMenuItemSpecializationsDto } from "./dto/replace-menu-item-specializations.dto";
 @Roles('admin')
 @Controller('admin/menu/items')
 export class MenuItemsController {
