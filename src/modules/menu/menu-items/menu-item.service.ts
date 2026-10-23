@@ -275,20 +275,38 @@ export class MenuItemsService {
         const page = query.page ?? 1;
         const limit = query.limit ?? 20;
         const search = query.search?.trim();
-        const minPrice = query.minPrice;
-        const maxPrice = query.maxPrice;
+        const { minPrice, maxPrice } = query;
 
-        if (minPrice!==undefined && maxPrice!==undefined && minPrice > maxPrice) throw new BadRequestException('Min price greater than Max price');
-
+        if (minPrice !== undefined && maxPrice !== undefined && minPrice > maxPrice) {
+            throw new BadRequestException('minPrice cannot be greater than maxPrice');
+        }
+        
+        const dietary: Prisma.menu_itemsWhereInput[] = [];
+        if (query.isVegetarian === true) {
+            dietary.push({
+                menu_item_ingredients: {
+                    some: {},
+                    none: { ingredients: { is_vegetarian: false } },
+                },
+            });
+        }
+        if (query.isVegan === true) {
+            dietary.push({
+                menu_item_ingredients: {
+                    some: {},
+                    none: { ingredients: { is_vegan: false } },
+                },
+            });
+        }
 
         const where: Prisma.menu_itemsWhereInput = {
             is_available: true,
             menu_categories: { is_active: true },
             category_id: query.categoryId,
-            OR:[
-                {price:{gte:minPrice}},
-                {price:{lte:maxPrice}}
-            ],
+            spice_level: query.spiceLevel,
+            ...(minPrice !== undefined || maxPrice !== undefined
+                ? { price: { gte: minPrice, lte: maxPrice } }
+                : {}),
             ...(search
                 ? {
                     OR: [
@@ -297,6 +315,7 @@ export class MenuItemsService {
                     ],
                 }
                 : {}),
+            ...(dietary.length > 0 ? { AND: dietary } : {}),
         };
 
         const [rows, total] = await this.prisma.$transaction([
@@ -318,5 +337,4 @@ export class MenuItemsService {
             hasNextPage: page * limit < total,
         };
     }
-
 }
