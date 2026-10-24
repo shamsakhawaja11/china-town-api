@@ -1,7 +1,6 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException, } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Prisma } from '../../generated/prisma/client';
-import { CreateRestaurantDto } from './dto/create-restaurant.dto';
 import { UpdateRestaurantDto } from './dto/update-restaurant.dto';
 
 type RestaurantRow = Prisma.restaurantsGetPayload<object>;
@@ -10,58 +9,28 @@ type RestaurantRow = Prisma.restaurantsGetPayload<object>;
 export class RestaurantsService {
     constructor(private prismaService: PrismaService) { }
 
-    async getAllPublic() {
-        const branches = await this.prismaService.restaurants.findMany({
+    async getDefaultRestaurant(): Promise<RestaurantRow> {
+        const restaurant = await this.prismaService.restaurants.findFirst({
             where: { is_active: true },
-            orderBy: { name: 'asc' },
+            orderBy: { created_at: 'asc' },
         });
-        return branches.map((b) => this.toResponse(b));
-    }
-
-    async getOnePublic(id: string) {
-        const branch = await this.findOrThrow(id);
-        if (!branch.is_active) {
-            throw new NotFoundException('Branch not found');
+        if (!restaurant) {
+            throw new InternalServerErrorException('Restaurant is not configured');
         }
-        return this.toResponse(branch);
+        return restaurant;
     }
 
-    async getAllAdmin() {
-        const branches = await this.prismaService.restaurants.findMany({
-            orderBy: { name: 'asc' },
-        });
-        return branches.map((b) => this.toResponse(b));
+    async getRestaurant() {
+        const restaurant = await this.getDefaultRestaurant();
+        return this.toResponse(restaurant);
     }
 
-    async getOneAdmin(id: string) {
-        const branch = await this.findOrThrow(id);
-        return this.toResponse(branch);
-    }
-
-    async create(dto: CreateRestaurantDto) {
-        this.assertValidRules(dto.opening_time, dto.closing_time, dto.latitude ?? null, dto.longitude ?? null);
-
-        const branch = await this.prismaService.restaurants.create({
-            data: {
-                name: dto.name,
-                description: dto.description ?? null,
-                address: dto.address,
-                latitude: dto.latitude ?? null,
-                longitude: dto.longitude ?? null,
-                phone: dto.phone ?? null,
-                opening_time: this.toTimeDate(dto.opening_time),
-                closing_time: this.toTimeDate(dto.closing_time),
-            },
-        });
-        return this.toResponse(branch);
-    }
-
-    async update(id: string, dto: UpdateRestaurantDto) {
+    async update(dto: UpdateRestaurantDto) {
         if (Object.values(dto).every((value) => value === undefined)) {
             throw new BadRequestException('No fields provided to update');
         }
 
-        const existing = await this.findOrThrow(id);
+        const existing = await this.getDefaultRestaurant();
 
         const opening = dto.opening_time ?? this.fromTimeDate(existing.opening_time);
         const closing = dto.closing_time ?? this.fromTimeDate(existing.closing_time);
@@ -79,28 +48,22 @@ export class RestaurantsService {
         if (dto.latitude !== undefined) data.latitude = dto.latitude;
         if (dto.longitude !== undefined) data.longitude = dto.longitude;
         if (dto.phone !== undefined) data.phone = dto.phone;
-        if (dto.is_active !== undefined) data.is_active = dto.is_active;
         if (dto.opening_time !== undefined) data.opening_time = this.toTimeDate(dto.opening_time);
         if (dto.closing_time !== undefined) data.closing_time = this.toTimeDate(dto.closing_time);
 
         const updated = await this.prismaService.restaurants.update({
-            where: { id },
+            where: { id: existing.id },
             data,
         });
         return this.toResponse(updated);
     }
 
-
-    private async findOrThrow(id: string): Promise<RestaurantRow> {
-        const branch = await this.prismaService.restaurants.findUnique({ where: { id } });
-        if (!branch) {
-            throw new NotFoundException('Branch not found');
-        }
-        return branch;
-    }
-
-    private assertValidRules(opening: string, closing: string, latitude: number | null, longitude: number | null) {
-
+    private assertValidRules(
+        opening: string,
+        closing: string,
+        latitude: number | null,
+        longitude: number | null,
+    ) {
         if (closing <= opening) {
             throw new BadRequestException('Closing time must be after opening time');
         }
@@ -124,20 +87,20 @@ export class RestaurantsService {
         return value === null ? null : value.toNumber();
     }
 
-    private toResponse(branch: RestaurantRow) {
+    private toResponse(restaurant: RestaurantRow) {
         return {
-            id: branch.id,
-            name: branch.name,
-            description: branch.description,
-            address: branch.address,
-            latitude: this.toNumber(branch.latitude),
-            longitude: this.toNumber(branch.longitude),
-            phone: branch.phone,
-            opening_time: this.fromTimeDate(branch.opening_time),
-            closing_time: this.fromTimeDate(branch.closing_time),
-            is_active: branch.is_active,
-            created_at: branch.created_at,
-            updated_at: branch.updated_at,
+            id: restaurant.id,
+            name: restaurant.name,
+            description: restaurant.description,
+            address: restaurant.address,
+            latitude: this.toNumber(restaurant.latitude),
+            longitude: this.toNumber(restaurant.longitude),
+            phone: restaurant.phone,
+            opening_time: this.fromTimeDate(restaurant.opening_time),
+            closing_time: this.fromTimeDate(restaurant.closing_time),
+            is_active: restaurant.is_active,
+            created_at: restaurant.created_at,
+            updated_at: restaurant.updated_at,
         };
     }
 }
