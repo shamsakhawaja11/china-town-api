@@ -14,6 +14,9 @@ import { RolesGuard } from './modules/auth/guards/roles.guard';
 import { RestaurantsModule } from './modules/restaurants/restaurants.module';
 import { StaffModule } from './modules/staff/staff.module';
 import { MenuModule } from './modules/menu/menu.module';
+import { TableCategoriesModule } from './modules/tables/table-categories/table-categories.module';
+import { FloorPlansModule } from './modules/tables/floor-plans/floor-plans.module';
+import { RestaurantsTablesModule } from './modules/tables/restaurant-tables/restaurant-tables.module';
 
 @Module({
   imports: [
@@ -21,10 +24,10 @@ import { MenuModule } from './modules/menu/menu.module';
     AuthModule,
     ConfigModule.forRoot({
       isGlobal: true,
-      validationSchema: envValidationSchema,
+      validationSchema: envValidationSchema,  
     }),
     SpecializationsModule,
-    UsersModule, RestaurantsModule, StaffModule,MenuModule,
+    UsersModule, RestaurantsModule, StaffModule, MenuModule, TableCategoriesModule, FloorPlansModule, RestaurantsTablesModule
   ],
   controllers: [AppController],
   providers: [AppService,
