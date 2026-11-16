@@ -103,4 +103,28 @@ export class RestaurantsService {
             updated_at: restaurant.updated_at,
         };
     }
+        async getTablesSummary() {
+        const restaurant = await this.getDefaultRestaurant();
+
+        const [totalTables, categories] = await Promise.all([
+            this.prismaService.restaurant_tables.count({
+                where: { restaurant_id: restaurant.id, is_active: true },
+            }),
+            this.prismaService.table_categories.findMany({
+                where: {
+                    restaurant_id: restaurant.id,
+                    is_active: true,
+                    // Only categories that still have at least one active table
+                    restaurant_tables: { some: { is_active: true } },
+                },
+                orderBy: { display_order: 'asc' },
+                select: { name: true },
+            }),
+        ]);
+
+        return {
+            total_tables: totalTables,
+            categories: categories.map((category) => category.name),
+        };
+    }
 }
