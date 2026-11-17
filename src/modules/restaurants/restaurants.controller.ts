@@ -11,4 +11,9 @@ export class RestaurantsController {
     get() {
         return this.restaurantsService.getRestaurant();
     }
+    @Public()
+    @Get('tables-summery')
+    getTableSummery() {
+        return this.restaurantsService.getTablesSummary();
+    }
 }
