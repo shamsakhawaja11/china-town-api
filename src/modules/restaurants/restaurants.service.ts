@@ -101,9 +101,10 @@ export class RestaurantsService {
             is_active: restaurant.is_active,
             created_at: restaurant.created_at,
             updated_at: restaurant.updated_at,
+            image_url: restaurant.image_url
         };
     }
-        async getTablesSummary() {
+    async getTablesSummary() {
         const restaurant = await this.getDefaultRestaurant();
 
         const [totalTables, categories] = await Promise.all([
@@ -114,8 +115,6 @@ export class RestaurantsService {
                 where: {
                     restaurant_id: restaurant.id,
                     is_active: true,
-                    // Only categories that still have at least one active table
-                    restaurant_tables: { some: { is_active: true } },
                 },
                 orderBy: { display_order: 'asc' },
                 select: { name: true },
