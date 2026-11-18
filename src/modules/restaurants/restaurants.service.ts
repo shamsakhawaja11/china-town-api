@@ -50,6 +50,7 @@ export class RestaurantsService {
         if (dto.phone !== undefined) data.phone = dto.phone;
         if (dto.opening_time !== undefined) data.opening_time = this.toTimeDate(dto.opening_time);
         if (dto.closing_time !== undefined) data.closing_time = this.toTimeDate(dto.closing_time);
+        if (dto.image_url !== undefined) data.image_url = dto.image_url;
 
         const updated = await this.prismaService.restaurants.update({
             where: { id: existing.id },
