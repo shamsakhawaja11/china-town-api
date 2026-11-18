@@ -5,6 +5,8 @@ import { Trim } from '../../../common/transformers/trim.transformer';
 const TIME_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/;
 const PHONE_REGEX = /^\+?[0-9]{7,15}$/;
 
+const UPLOAD_PATH_REGEX = /^\/uploads\/[A-Za-z0-9_-]+(\.[A-Za-z0-9]+)?$/;
+
 export class UpdateRestaurantDto {
 
     @ValidateIf((_, value) => value !== undefined)
@@ -19,6 +21,15 @@ export class UpdateRestaurantDto {
     @IsNotEmpty()
     @Transform(Trim)
     address?: string;
+
+    @IsOptional()
+    @IsString()
+    @MaxLength(250)
+    @Matches(UPLOAD_PATH_REGEX, {
+        message: 'image_url must be a path returned by the upload endpoint, like /uploads/<file>.jpg',
+    })
+    @Transform(Trim)
+    image_url?: string | null;
 
     @ValidateIf((_, value) => value !== undefined)
     @IsString()
