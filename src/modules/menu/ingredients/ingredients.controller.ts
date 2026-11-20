@@ -24,8 +24,8 @@ export class IngredientController {
         return this.ingredients.findOne(id);
     }
 
-    @Patch('id')
-    update(@Param('id', ParseEnumPipe)id:string,@Body()dto:UpdateIngredientDto) {
+    @Patch(':id')
+    update(@Param('id',ParseUUIDPipe)id:string,@Body()dto:UpdateIngredientDto) {
         return this.ingredients.update(id,dto);
     }
 }
