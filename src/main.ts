@@ -11,6 +11,8 @@ async function bootstrap() {
   const configService = app.get(ConfigService);
   const portNumber = configService.getOrThrow<number>('PORT');
   app.enableShutdownHooks();
+  // the mobile app (and Expo web during development) calls the API from another origin
+  app.enableCors();
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
