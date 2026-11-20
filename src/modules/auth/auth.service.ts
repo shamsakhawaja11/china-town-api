@@ -157,13 +157,21 @@ export class AuthService {
                 role: true,
                 is_active: true,
                 created_at: true,
+                staff: { select: { id: true, staff_type: true, position: true, is_available: true, restaurant_id: true } },
             },
         });
 
         if (!user || !user.is_active) {
             throw new UnauthorizedException('Invalid credentials');
         }
-        return user;
+        const { staff, ...rest } = user;
+        // staffType lets the app pick the right home screen (chef / waiter / manager)
+        return {
+            ...rest,
+            staff: staff
+                ? { id: staff.id, staffType: staff.staff_type, position: staff.position, isAvailable: staff.is_available }
+                : null,
+        };
     }
 
     async logout(id: string, refreshToken: string) {
