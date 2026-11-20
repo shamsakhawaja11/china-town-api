@@ -1,11 +1,11 @@
-import { BadRequestException, Injectable, NotFoundException, Search } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { Prisma } from '../../../generated/prisma/client';
 import { CreateMenuItemDto } from './dto/create-menu-item.dto';
 import { UpdateMenuItemDto } from './dto/update-menu-item.dto';
 import { ReplaceMenuItemIngredientsDto } from './dto/replace-menu-item-ingredients.dto';
 import { ReplaceMenuItemSpecializationsDto } from './dto/replace-menu-item-specializations.dto';
-import { ListMenuItemsQueryDto } from './dto/list-menu-items-query.dto';
+import { ListMenuItemsQueryDto, MenuItemSortField } from './dto/list-menu-items-query.dto';
 
 const menuItemInclude = {
     menu_categories: { select: { id: true, name: true } },
@@ -117,6 +117,7 @@ export class MenuItemsService {
                 category_id: dto.categoryId,
                 name: dto.name,
                 description: dto.description,
+                image_url: dto.imageUrl,
                 price: dto.price,
                 spice_level: dto.spiceLevel,
                 is_available: dto.isAvailable,
@@ -183,6 +184,7 @@ export class MenuItemsService {
                 category_id: dto.categoryId,
                 name: dto.name,
                 description: dto.description,
+                image_url: dto.imageUrl,
                 price: dto.price,
                 spice_level: dto.spiceLevel,
                 is_available: dto.isAvailable,
@@ -271,18 +273,51 @@ export class MenuItemsService {
         return this.findOne(id);
     }
 
+    /** Item details screen (ingredients, allergens, rating, latest reviews). */
+    async findPublicOne(id: string) {
+        const item = await this.prisma.menu_items.findFirst({
+            where: { id, menu_categories: { is_active: true } },
+            include: {
+                ...menuItemInclude,
+                dish_reviews: {
+                    orderBy: { created_at: 'desc' },
+                    take: 3,
+                    include: { users: { select: { name: true } } },
+                },
+            },
+        });
+        if (!item) {
+            throw new NotFoundException('Menu item not found');
+        }
+        const { dish_reviews, ...rest } = item;
+        return {
+            ...this.toResponse(rest),
+            latestReviews: dish_reviews.map((r) => {
+                const parts = r.users.name.trim().split(/\s+/);
+                return {
+                    id: r.id,
+                    rating: r.rating,
+                    comment: r.comment,
+                    reviewer: parts.length > 1 ? `${parts[0]} ${parts[parts.length - 1][0].toUpperCase()}.` : parts[0],
+                    createdAt: r.created_at,
+                };
+            }),
+        };
+    }
+
     async findPublic(query: ListMenuItemsQueryDto) {
         const page = query.page ?? 1;
         const limit = query.limit ?? 20;
         const search = query.search?.trim();
         const { minPrice, maxPrice } = query;
         const excludeAllergenIds = query.excludeAllergenIds ?? [];
+        const sortBy = query.sortBy ?? 'name';
+        const order = query.order ?? 'asc';
 
         if (minPrice !== undefined && maxPrice !== undefined && minPrice > maxPrice) {
             throw new BadRequestException('minPrice cannot be greater than maxPrice');
         }
 
-        
         const conditions: Prisma.menu_itemsWhereInput[] = [];
 
         if (query.isVegetarian === true) {
@@ -338,7 +373,7 @@ export class MenuItemsService {
             this.prisma.menu_items.findMany({
                 where,
                 include: menuItemInclude,
-                orderBy: { name: 'asc' },
+                orderBy: this.buildOrderBy(sortBy, order),
                 skip: (page - 1) * limit,
                 take: limit,
             }),
@@ -352,5 +387,30 @@ export class MenuItemsService {
             total,
             hasNextPage: page * limit < total,
         };
+    }
+    private buildOrderBy(sortBy: MenuItemSortField, order: 'asc' | 'desc'): Prisma.menu_itemsOrderByWithRelationInput[] {
+        let primary: Prisma.menu_itemsOrderByWithRelationInput;
+
+        switch (sortBy) {
+            case 'name':
+                primary = { name: order };
+                break;
+            case 'price':
+                primary = { price: order };
+                break;
+            case 'preparationTimeMinutes':
+                primary = { preparation_time_minutes: { sort: order, nulls: 'last' } };
+                break;
+            case 'rating':
+                primary = { avg_rating: order };
+                break;
+            default: {
+                const unreachable: never = sortBy;
+                throw new BadRequestException(`Unsupported sort field: ${unreachable}`);
+            }
+        }
+        return sortBy === 'name'
+            ? [primary, { id: 'asc' }]
+            : [primary, { name: 'asc' }, { id: 'asc' }];
     }
 }
