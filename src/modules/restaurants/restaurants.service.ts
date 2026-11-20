@@ -22,7 +22,15 @@ export class RestaurantsService {
 
     async getRestaurant() {
         const restaurant = await this.getDefaultRestaurant();
-        return this.toResponse(restaurant);
+        const rating = await this.prismaService.restaurant_reviews.aggregate({
+            _avg: { rating: true },
+            _count: { _all: true },
+        });
+        return {
+            ...this.toResponse(restaurant),
+            rating: Math.round((rating._avg.rating ?? 0) * 10) / 10,
+            review_count: rating._count._all,
+        };
     }
 
     async update(dto: UpdateRestaurantDto) {
@@ -125,6 +133,51 @@ export class RestaurantsService {
         return {
             total_tables: totalTables,
             categories: categories.map((category) => category.name),
+        };
+    }
+
+
+    async getLiveTables() {
+        const restaurant = await this.getDefaultRestaurant();
+        const now = new Date();
+        const soon = new Date(now.getTime() + 60 * 60000);
+        const [plan, tables, busyOrders, busyBookings] = await Promise.all([
+            this.prismaService.floor_plans.findFirst({
+                where: { restaurant_id: restaurant.id, is_active: true, is_default: true },
+            }),
+            this.prismaService.restaurant_tables.findMany({
+                where: { restaurant_id: restaurant.id, is_active: true },
+                include: { table_categories: { select: { id: true, name: true } } },
+                orderBy: { table_number: 'asc' },
+            }),
+            this.prismaService.orders.findMany({
+                where: { table_id: { not: null }, status: { in: ['pending', 'accepted', 'preparing', 'ready', 'served'] } },
+                select: { table_id: true },
+            }),
+            this.prismaService.$queryRaw<{ table_id: string }[]>`
+                SELECT DISTINCT rt.table_id FROM reservation_tables rt
+                JOIN reservations r ON r.id = rt.reservation_id
+                WHERE rt.is_active AND r.status IN ('confirmed','seated')
+                  AND rt.during && tstzrange(${now}::timestamptz, ${soon}::timestamptz, '[)')`,
+        ]);
+        const busy = new Set([...busyOrders.map((o) => o.table_id), ...busyBookings.map((b) => b.table_id)]);
+        return {
+            floorPlan: plan
+                ? { id: plan.id, name: plan.name, canvasWidth: plan.canvas_width, canvasHeight: plan.canvas_height, backgroundUrl: plan.background_url }
+                : null,
+            tables: tables.map((t) => ({
+                id: t.id,
+                tableNumber: t.table_number,
+                capacity: t.capacity,
+                category: t.table_categories,
+                posX: t.pos_x.toNumber(),
+                posY: t.pos_y.toNumber(),
+                width: t.width.toNumber(),
+                height: t.height.toNumber(),
+                rotation: t.rotation.toNumber(),
+                isAvailable: !busy.has(t.id),
+                fitsParty: true,
+            })),
         };
     }
 }
