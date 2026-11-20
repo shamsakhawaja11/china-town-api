@@ -4,16 +4,74 @@ import { CreateStaffDto } from './dto/create-staff.dto';
 import { Prisma } from '../../generated/prisma/client';
 import { ListStaffQueryDto } from './dto/list-staff-query.dto';
 import { UpdateStaffDto } from './dto/update-staff.dto';
+import { CreateStaffAccountDto } from './dto/create-staff-account.dto';
+import { UsersService } from '../users/users.service';
+import { RestaurantsService } from '../restaurants/restaurants.service';
+import * as argon2 from 'argon2';
 
 const STAFF_INCLUDE = {
     users: { select: { name: true, email: true, phone: true } },
+    staff_specializations: { include: { food_specializations: { select: { id: true, name: true } } } },
 } satisfies Prisma.staffInclude;
 
 type StaffWithUser = Prisma.staffGetPayload<{ include: typeof STAFF_INCLUDE }>;
 
 @Injectable()
 export class StaffService {
-    constructor(private prismaService: PrismaService) { }
+    constructor(
+        private prismaService: PrismaService,
+        private usersService: UsersService,
+        private restaurantsService: RestaurantsService,
+    ) { }
+
+    private async assertSpecializations(ids: string[]) {
+        if (ids.length === 0) return;
+        const count = await this.prismaService.food_specializations.count({ where: { id: { in: ids }, is_active: true } });
+        if (count !== ids.length) throw new BadRequestException('One or more specializations do not exist or are inactive');
+    }
+
+    /** "Add chef / staff" screen: creates the login and the staff profile together. */
+    async createWithAccount(dto: CreateStaffAccountDto) {
+        const specializationIds = dto.specializationIds ?? [];
+        await this.assertSpecializations(specializationIds);
+        const restaurantId = dto.restaurantId ?? (await this.restaurantsService.getDefaultRestaurant()).id;
+
+        const user = await this.usersService.create(dto.name, await argon2.hash(dto.password), dto.email, dto.phone);
+        try {
+            const staff = await this.prismaService.$transaction(async (tx) => {
+                await tx.users.update({ where: { id: user.id }, data: { role: 'staff' } });
+                return tx.staff.create({
+                    data: {
+                        user_id: user.id,
+                        restaurant_id: restaurantId,
+                        staff_type: dto.staffType,
+                        position: dto.position,
+                        staff_specializations: {
+                            createMany: { data: specializationIds.map((specialization_id) => ({ specialization_id })) },
+                        },
+                    },
+                    include: STAFF_INCLUDE,
+                });
+            });
+            return this.toResponse(staff);
+        } catch (err) {
+            // don't leave a half-created login behind
+            await this.prismaService.users.delete({ where: { id: user.id } }).catch(() => undefined);
+            throw err;
+        }
+    }
+
+    async replaceSpecializations(id: string, specializationIds: string[]) {
+        await this.findOrThrow(id);
+        await this.assertSpecializations(specializationIds);
+        await this.prismaService.$transaction([
+            this.prismaService.staff_specializations.deleteMany({ where: { staff_id: id } }),
+            this.prismaService.staff_specializations.createMany({
+                data: specializationIds.map((specialization_id) => ({ staff_id: id, specialization_id })),
+            }),
+        ]);
+        return this.getOne(id);
+    }
 
     async create(dto: CreateStaffDto) {
         try {
@@ -137,6 +195,7 @@ export class StaffService {
             position: staff.position,
             isAvailable: staff.is_available,
             isActive: staff.is_active,
+            specializations: staff.staff_specializations.map((s) => s.food_specializations),
         };
     }
 }
