@@ -1,5 +1,5 @@
 import { Transform, Type } from "class-transformer"
-import { ArrayMinSize, ArrayUnique, IsArray, IsBoolean, IsEnum, IsInt, IsNotEmpty, IsNumber, IsOptional, IsPositive, IsString, IsUUID, MaxLength, Min, ValidateNested } from "class-validator"
+import { ArrayMinSize, ArrayUnique, IsArray, IsBoolean, IsEnum, IsInt, IsNotEmpty, IsNumber, IsOptional, IsPositive, IsString, IsUUID, Matches, MaxLength, Min, ValidateNested } from "class-validator"
 import { Trim } from "../../../../common/transformers/trim.transformer"
 import { spice_level_enum } from "../../../../generated/prisma/enums"
 import { MenuItemIngredientDto } from "./menu-item-ingredient.dto"
@@ -17,6 +17,14 @@ export class CreateMenuItemDto {
     @IsOptional()
     @IsString()
     description?: string
+
+    /** Path returned by POST /admin/uploads/image, e.g. /uploads/<file>.jpg */
+    @IsOptional()
+    @IsString()
+    @Matches(/^\/uploads\/[A-Za-z0-9_-]+(\.[A-Za-z0-9]+)?$/, {
+        message: 'imageUrl must be a path returned by the upload endpoint, like /uploads/<file>.jpg',
+    })
+    imageUrl?: string | null
 
     @Min(1)
     @IsNumber({ maxDecimalPlaces: 2 })
