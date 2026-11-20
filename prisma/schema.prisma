@@ -112,12 +112,19 @@ model inventory_items {
   ingredient_id          String                   @db.Uuid
   current_quantity       Decimal                  @default(0) @db.Decimal(10, 3)
   reorder_level          Decimal                  @default(0) @db.Decimal(10, 3)
+  /// Target stock level used by the restock plan ("fill up to").
+  par_level              Decimal                  @default(0) @db.Decimal(10, 3)
+  /// Last known cost per unit, used for restock cost estimates.
+  unit_cost              Decimal                  @default(0) @db.Decimal(10, 2)
+  category               inventory_category_enum  @default(other)
+  default_supplier       String?                  @db.VarChar(150)
   is_active              Boolean                  @default(true)
   created_at             DateTime                 @default(now()) @db.Timestamptz(6)
   updated_at             DateTime                 @default(now()) @db.Timestamptz(6)
   ingredients            ingredients              @relation(fields: [ingredient_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   restaurants            restaurants              @relation(fields: [restaurant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   inventory_transactions inventory_transactions[]
+  purchase_order_items   purchase_order_items[]
 
   @@unique([restaurant_id, ingredient_id])
   @@index([ingredient_id], map: "idx_inventory_items_ingredient")
@@ -134,14 +141,18 @@ model inventory_transactions {
   quantity_before   Decimal                 @db.Decimal(10, 3)
   quantity_after    Decimal                 @db.Decimal(10, 3)
   reason            String?
+  unit_cost              Decimal?                @db.Decimal(10, 2)
+  purchase_order_item_id String?                 @db.Uuid
   created_at        DateTime                @default(now()) @db.Timestamptz(6)
   inventory_items   inventory_items         @relation(fields: [inventory_item_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   order_items       order_items?            @relation(fields: [order_item_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   staff             staff?                  @relation(fields: [performed_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  purchase_order_items purchase_order_items? @relation(fields: [purchase_order_item_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([inventory_item_id, created_at(sort: Desc)], map: "idx_inventory_tx_item")
   @@index([order_item_id], map: "idx_inventory_tx_order_item")
   @@index([performed_by], map: "idx_inventory_tx_performed_by")
+  @@index([purchase_order_item_id], map: "idx_inventory_tx_po_item")
 }
 
 model menu_categories {
@@ -275,6 +286,8 @@ model orders {
   restaurant_id       String               @db.Uuid
   order_type          order_type_enum
   reservation_id      String?              @db.Uuid
+  /// Table for walk-in dine-in orders (reservation orders get tables from the reservation).
+  table_id            String?              @db.Uuid
   status              order_status_enum    @default(draft)
   rejection_reason    String?
   reviewed_by         String?              @db.Uuid
@@ -283,12 +296,16 @@ model orders {
   payment_status      payment_status_enum  @default(unpaid)
   subtotal            Decimal              @default(0) @db.Decimal(10, 2)
   tax                 Decimal              @default(0) @db.Decimal(10, 2)
+  tip                 Decimal              @default(0) @db.Decimal(10, 2)
   total               Decimal              @default(0) @db.Decimal(10, 2)
   notes               String?
   cancellation_reason String?
   placed_at           DateTime?            @db.Timestamptz(6)
+  preparing_at        DateTime?            @db.Timestamptz(6)
   ready_at            DateTime?            @db.Timestamptz(6)
+  served_at           DateTime?            @db.Timestamptz(6)
   completed_at        DateTime?            @db.Timestamptz(6)
+  cancelled_at        DateTime?            @db.Timestamptz(6)
   created_at          DateTime             @default(now()) @db.Timestamptz(6)
   updated_at          DateTime             @default(now()) @db.Timestamptz(6)
   order_fulfillments  order_fulfillments?
@@ -296,6 +313,7 @@ model orders {
   users               users                @relation(fields: [customer_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   reservations        reservations?        @relation(fields: [reservation_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   restaurants         restaurants          @relation(fields: [restaurant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  restaurant_tables   restaurant_tables?   @relation(fields: [table_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   staff               staff?               @relation(fields: [reviewed_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
   payments            payments[]
   restaurant_reviews  restaurant_reviews?
@@ -305,6 +323,7 @@ model orders {
   @@index([customer_id, created_at(sort: Desc)], map: "idx_orders_customer")
   @@index([reservation_id], map: "idx_orders_reservation")
   @@index([reviewed_by], map: "idx_orders_reviewed_by")
+  @@index([table_id], map: "idx_orders_table")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -330,6 +349,43 @@ model payments {
   @@index([order_id], map: "idx_payments_order")
   @@index([received_by], map: "idx_payments_received_by")
   @@index([reservation_id], map: "idx_payments_reservation")
+}
+
+/// Restock order sent to a supplier. Created from the restock plan, then received (fully or partly).
+model purchase_orders {
+  id                   String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  restaurant_id        String                     @db.Uuid
+  supplier_name        String?                    @db.VarChar(150)
+  status               purchase_order_status_enum @default(ordered)
+  notes                String?
+  total_cost           Decimal                    @default(0) @db.Decimal(12, 2)
+  created_by           String?                    @db.Uuid
+  expected_at          DateTime?                  @db.Timestamptz(6)
+  ordered_at           DateTime                   @default(now()) @db.Timestamptz(6)
+  received_at          DateTime?                  @db.Timestamptz(6)
+  created_at           DateTime                   @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime                   @default(now()) @db.Timestamptz(6)
+  restaurants          restaurants                @relation(fields: [restaurant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users                users?                     @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  purchase_order_items purchase_order_items[]
+
+  @@index([restaurant_id, status, created_at(sort: Desc)], map: "idx_purchase_orders_branch_status")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model purchase_order_items {
+  id                     String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  purchase_order_id      String                   @db.Uuid
+  inventory_item_id      String                   @db.Uuid
+  quantity_ordered       Decimal                  @db.Decimal(10, 3)
+  quantity_received      Decimal                  @default(0) @db.Decimal(10, 3)
+  unit_cost              Decimal                  @default(0) @db.Decimal(10, 2)
+  purchase_orders        purchase_orders          @relation(fields: [purchase_order_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  inventory_items        inventory_items          @relation(fields: [inventory_item_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  inventory_transactions inventory_transactions[]
+
+  @@unique([purchase_order_id, inventory_item_id])
+  @@index([inventory_item_id], map: "idx_purchase_order_items_item")
 }
 
 model refresh_tokens {
@@ -426,6 +482,9 @@ model restaurant_reviews {
   customer_id                String                      @db.Uuid
   order_id                   String                      @unique @db.Uuid
   rating                     Int
+  food_rating                Int?
+  service_rating             Int?
+  ambience_rating            Int?
   comment                    String?
   created_at                 DateTime                    @default(now()) @db.Timestamptz(6)
   updated_at                 DateTime                    @default(now()) @db.Timestamptz(6)
@@ -453,6 +512,7 @@ model restaurant_tables {
   created_at         DateTime             @default(now()) @db.Timestamptz(6)
   updated_at         DateTime             @default(now()) @db.Timestamptz(6)
   reservation_tables reservation_tables[]
+  orders             orders[]
   table_categories   table_categories?    @relation(fields: [category_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   floor_plans        floor_plans          @relation(fields: [floor_plan_id, restaurant_id], references: [id, restaurant_id], onUpdate: NoAction)
   restaurants        restaurants          @relation(fields: [restaurant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -483,6 +543,7 @@ model restaurants {
   inventory_items   inventory_items[]
   menu_categories   menu_categories[]
   orders            orders[]
+  purchase_orders   purchase_orders[]
   reservations      reservations[]
   restaurant_tables restaurant_tables[]
   staff             staff[]
@@ -566,6 +627,7 @@ model users {
   dish_reviews               dish_reviews[]
   notifications              notifications[]
   orders                     orders[]
+  purchase_orders            purchase_orders[]
   refresh_tokens             refresh_tokens[]
   reservations               reservations[]
   restaurant_review_analysis restaurant_review_analysis[]
@@ -611,6 +673,24 @@ enum assignment_status_enum {
   assigned
   in_progress
   done
+}
+
+enum inventory_category_enum {
+  meat
+  seafood
+  vegetables
+  dry_goods
+  sauces
+  dairy
+  beverages
+  other
+}
+
+enum purchase_order_status_enum {
+  ordered
+  partially_received
+  received
+  cancelled
 }
 
 enum ingredient_component_enum {
