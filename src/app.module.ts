@@ -17,6 +17,17 @@ import { MenuModule } from './modules/menu/menu.module';
 import { TableCategoriesModule } from './modules/tables/table-categories/table-categories.module';
 import { FloorPlansModule } from './modules/tables/floor-plans/floor-plans.module';
 import { RestaurantsTablesModule } from './modules/tables/restaurant-tables/restaurant-tables.module';
+import { UploadsModule } from './modules/uploads/uploads.module';
+import { AccessModule } from './common/access/access.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
+import { WalletModule } from './modules/wallet/wallet.module';
+import { PaymentsModule } from './modules/payments/payments.module';
+import { OrdersModule } from './modules/orders/orders.module';
+import { KitchenModule } from './modules/kitchen/kitchen.module';
+import { InventoryModule } from './modules/inventory/inventory.module';
+import { ReservationsModule } from './modules/reservations/reservations.module';
+import { ReviewsModule } from './modules/reviews/reviews.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -27,7 +38,12 @@ import { RestaurantsTablesModule } from './modules/tables/restaurant-tables/rest
       validationSchema: envValidationSchema,  
     }),
     SpecializationsModule,
-    UsersModule, RestaurantsModule, StaffModule, MenuModule, TableCategoriesModule, FloorPlansModule, RestaurantsTablesModule
+    UsersModule, RestaurantsModule, StaffModule, MenuModule,
+    TableCategoriesModule, FloorPlansModule, RestaurantsTablesModule,
+    UploadsModule,
+    AccessModule, NotificationsModule, WalletModule, PaymentsModule,
+    OrdersModule, KitchenModule, InventoryModule, ReservationsModule,
+    ReviewsModule, DashboardModule,
   ],
   controllers: [AppController],
   providers: [AppService,
